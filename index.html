@@ -2005,6 +2005,8 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
         }
         .drag-grip:hover { color: var(--text); background: var(--option-hover, rgba(255,255,255,0.06)); }
         .drag-grip:active { cursor: grabbing; }
+        /* 题目行「更多」按钮：桌面隐藏（右键菜单已够用），仅手机端显示（替代右键菜单，可点按） */
+        .q-menu-btn { display: none; }
         .wrong-item.selected {
             outline: 2px solid #4f7cff;
             outline-offset: -2px;
@@ -3190,6 +3192,114 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
         .rp-btn-primary:hover { filter: brightness(1.06); box-shadow: 0 10px 28px rgba(35,184,108,.5); }
         .rp-btn-ghost { background: rgba(255,255,255,.06); color: #cfd8e6; border: 1px solid rgba(255,255,255,.16); }
         .rp-btn-ghost:hover { background: rgba(255,255,255,.12); }
+        /* 底部导航栏：桌面隐藏，移动端才显示（见下方媒体查询） */
+        .bottom-nav { display: none; }
+        /* 题目行移动按钮：桌面隐藏，移动端显示（替代不可用的 HTML5 拖拽手柄） */
+        .q-move-btns { display: none; align-items: center; gap: 4px; }
+        .q-move-btns .mv-btn {
+            border: 1px solid var(--border); background: var(--surface-3); color: var(--text);
+            border-radius: 8px; width: 30px; height: 30px; font-size: 1rem; line-height: 1; cursor: pointer;
+            display: inline-flex; align-items: center; justify-content: center;
+        }
+        .q-move-btns .mv-btn:active { background: var(--accent-soft); color: var(--accent); }
+        /* ============================================================
+           移动端响应式（≤820px）：手机 / 平板深度适配
+           桌面端布局与交互完全不变，仅在此按屏幕收窄重排 + 触摸交互支撑。
+           ============================================================ */
+        @media (max-width: 820px) {
+            .app-shell { flex-direction: column; height: 100vh; height: 100dvh; }
+            .sidebar { display: none !important; }
+            .main-content { padding: 0 14px 90px; }
+            .content-wrap.home-mode { margin-bottom: 0; }
+            /* 手机端顶栏已改为静态，去掉桌面悬浮顶栏预留的 56px 顶部空隙，让题库滑动列表撑满更高 */
+            .home-card { padding-top: 6px; }
+            .home-card > .time-banner { margin-bottom: 8px; padding: 9px 12px; gap: 10px; }
+            .time-banner-emoji { font-size: 1.4rem; }
+            .time-banner-title { font-size: .92rem; }
+            .time-banner-text { font-size: .82rem; }
+            .home-card > .card-header { margin-bottom: 8px; }
+            /* 操作工具栏：窄屏收成单行横向滚动，避免 5 个按钮折行吃掉列表高度 */
+            .home-card > .card-header .toolbar { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 8px; padding-bottom: 2px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+            .home-card > .card-header .toolbar::-webkit-scrollbar { display: none; }
+            .home-card > .card-header .toolbar .btn { flex: 0 0 auto; width: auto; min-width: 0; white-space: nowrap; padding: 8px 12px; font-size: .82rem; }
+            .home-card > .folder-nav { margin: 6px 0 8px; padding: 6px 0; }
+            .home-card > .deck-search-wrap { margin-bottom: 8px; }
+            .main-content.home-mode .topbar,
+            .app-shell.mode-fill .topbar { position: static; right: auto; top: auto; margin-bottom: 12px; }
+            .topbar { flex-wrap: wrap; padding-top: 12px; }
+            .topbar-right { flex-wrap: wrap; width: 100%; justify-content: flex-end; }
+            .app-shell.mode-fill .main-content { padding: 0 14px 90px; }
+            .app-shell.mode-fill .main-content.wf-fill { padding: 0 14px 90px; }
+            .app-shell.mode-fill .card { padding-top: 16px; }
+            .card { padding: 16px; border-radius: 14px; }
+            /* 底部导航栏 */
+            .bottom-nav {
+                display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 900;
+                background: var(--surface-2); border-top: 1px solid var(--border);
+                padding: 6px 2px calc(6px + env(safe-area-inset-bottom));
+                justify-content: space-around; align-items: stretch;
+            }
+            .bottom-nav .bn-item {
+                flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
+                background: transparent; border: none; color: var(--text-muted); cursor: pointer;
+                padding: 5px 2px; font-size: .6rem; border-radius: 12px; position: relative;
+            }
+            .bottom-nav .bn-item.active { color: var(--accent); background: var(--accent-soft); }
+            .bottom-nav .bn-ico { font-size: 1.3rem; line-height: 1; }
+            .bottom-nav .bn-badge {
+                position: absolute; top: 1px; left: 50%; margin-left: 7px; min-width: 16px; height: 16px;
+                padding: 0 4px; border-radius: 999px; background: var(--accent); color: #fff;
+                font-size: .56rem; font-weight: 700; display: flex; align-items: center; justify-content: center;
+            }
+            /* 题库卡片：整宽、字号/间距放大，更易点按 */
+            .deck-item { padding: 20px 18px; margin-bottom: 14px; align-items: flex-start; }
+            .deck-item > div:first-child { flex: 1 1 auto; min-width: 0; }
+            .deck-name { font-size: 1.2rem; line-height: 1.35; }
+            .deck-count { font-size: .95rem; }
+            .deck-time { font-size: .88rem; margin-top: 4px; }
+            .deck-item .actions { width: 100%; display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+            .deck-item .actions .btn { flex: 1 1 auto; min-width: 96px; font-size: .95rem; padding: 13px 12px; border-radius: 12px; }
+            .folder-item { padding: 20px 18px; margin-bottom: 14px; }
+            /* 触屏拖拽：关闭浏览器默认手势，使自实现指针拖拽（排序 / 合并 / 移入文件夹）在手机上可用 */
+            .folder-list .deck-item, .folder-list .folder-item { touch-action: none; }
+            /* 音乐面板为桌面拖入导入功能，移动端隐藏以避免占位串版（后续可改为抽屉） */
+            .music-panel { display: none; }
+            /* 弹窗全屏 */
+            .modal-overlay { padding: 0; align-items: stretch; }
+            .modal { max-width: none; width: 100%; height: 100%; max-height: none; border-radius: 0; padding: 18px 16px 28px; }
+            .qedit-modal { max-height: none; border-radius: 0; }
+            .qedit-head { position: sticky; top: 0; background: var(--card-bg); z-index: 2; }
+            .qedit-modal .modal-actions { position: sticky; bottom: 0; background: var(--card-bg); }
+            .pv-fullscreen-overlay { padding: 0; }
+            .pv-fullscreen-box { max-width: none; max-height: 100vh; height: 100%; border-radius: 0; }
+            /* 几何图（只读）允许纵向滚动，避免锁死页面滚动 */
+            .geom-board-svg { touch-action: pan-y; }
+            /* 题目行：移动端显示上下移动按钮，隐藏拖拽手柄（HTML5 DnD 触屏不可用） */
+            .deck-q-row .drag-grip { display: none; }
+            .q-move-btns { display: inline-flex !important; }
+            .wrong-actions { width: 100%; }
+            /* 草稿纸按钮抬到底部导航上方 */
+            .scratch-root { bottom: calc(78px + env(safe-area-inset-bottom)); right: 12px; }
+            /* 字号收敛 */
+            .page-head .page-title { font-size: 1.25rem; }
+            .qedit-head h3 { font-size: 1.1rem; }
+            /* 题目行「更多」按钮：手机端显示，作为右键菜单的触屏替代入口 */
+            .q-menu-btn {
+                display: inline-flex; align-items: center; justify-content: center;
+                flex: 0 0 auto; margin-left: 6px;
+                width: 36px; height: 36px; font-size: 1.25rem; line-height: 1;
+                border: 1px solid var(--border); background: var(--surface-3); color: var(--text);
+                border-radius: 9px; cursor: pointer;
+            }
+            .q-menu-btn:active { background: var(--accent-soft); color: var(--accent); }
+            /* 上下文菜单：放大点按区域，避免误触；超高时内部滚动不溢出视口 */
+            .ctx-menu, .qctx-menu { max-height: 72vh; overflow-y: auto; }
+            .ctx-item, .qctx-menu button {
+                padding: 14px 16px; font-size: 1rem; white-space: normal;
+            }
+            .ctx-item { text-align: left; }
+            .qctx-menu button { text-align: left; }
+        }
     </style>
 </head>
 <body>
@@ -6281,6 +6391,47 @@ body { font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB","Segoe UI"
             );
         });
 
+        // 移动端底部导航栏：桌面隐藏（CSS），手机上替代侧栏承担导航。交互与侧栏一致（切栏目清会话、错题/收藏标记已读）。
+        const BottomNav = React.memo(() => {
+            const { mode, setMode } = useUi();
+            const { wrongQuestions, favorites, wrongLastSeen, favLastSeen } = useData();
+            const actions = useActions();
+            const { setSession, setPracticeSession } = useSession();
+            const active = (mode === 'learn' || mode === 'practice') ? 'home' : mode;
+            // 做题/练习进行中：隐藏底部导航，避免误触切栏目清空进度；退出由题目卡自身返回按钮处理
+            if (mode === 'learn' || mode === 'practice') return null;
+            const wrongUnread = wrongLastSeen == null
+                ? wrongQuestions.length
+                : wrongQuestions.filter(w => (w.timestamp || 0) > wrongLastSeen).length;
+            const favUnread = favLastSeen == null
+                ? favorites.length
+                : favorites.filter(f => (f.timestamp || 0) > favLastSeen).length;
+            const items = [
+                { key: 'home', icon: '📚', label: '题库' },
+                { key: 'generate', icon: '🤖', label: 'AI' },
+                { key: 'wrong', icon: '📕', label: '错题', badge: wrongUnread },
+                { key: 'favorites', icon: '⭐', label: '收藏', badge: favUnread },
+                { key: 'me', icon: '👤', label: '我的' }
+            ];
+            const go = (key) => {
+                if (mode === 'learn') setSession(null);
+                if (mode === 'practice') setPracticeSession(null);
+                if (key === 'wrong' || key === 'favorites') actions.markSeen(key);
+                setMode(key);
+            };
+            return React.createElement("nav", { className: "bottom-nav" },
+                items.map(it => React.createElement("button", {
+                    key: it.key,
+                    className: "bn-item" + (active === it.key ? " active" : ""),
+                    onClick: () => go(it.key)
+                },
+                    React.createElement("span", { className: "bn-ico" }, it.icon),
+                    React.createElement("span", { className: "bn-label" }, it.label),
+                    it.badge ? React.createElement("span", { className: "bn-badge" }, it.badge) : null
+                ))
+            );
+        });
+
         // 全屏切换图标（内联 SVG，避免 ⛶/🗗 等字符在无字形字体下不显示）
         function FullscreenIcon(active) {
             const common = { width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' };
@@ -6784,7 +6935,7 @@ body { font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB","Segoe UI"
         // 11. DeckEditor（重构：单栏增强 + 细粒度题目操作）
         // ============================================================
         // 题库题目行：独立 memo 组件；支持选中高亮 / 拖拽手柄 / 右键菜单
-        const DeckQuestionRow = React.memo(({ q, index, selected, onEdit, onDelete, onScoreChange, onDifficultyChange, onSelect, onContextMenu, onGripDragStart, onRowDragOver, onRowDrop, onRowDragEnd, dropIndicator }) => {
+        const DeckQuestionRow = React.memo(({ q, index, selected, onEdit, onDelete, onScoreChange, onDifficultyChange, onSelect, onContextMenu, onGripDragStart, onRowDragOver, onRowDrop, onRowDragEnd, onMoveUp, onMoveDown, onMenu, dropIndicator }) => {
             return React.createElement("div", {
                 className: "wrong-item deck-q-row" + (selected ? " selected" : "") + (dropIndicator ? " " + dropIndicator : ""),
                 "data-qid": q.id,
@@ -6795,14 +6946,20 @@ body { font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB","Segoe UI"
                 onDragEnd: onRowDragEnd
             },
                 React.createElement("span", {
-                    className: "drag-grip", title: "拖拽排序", draggable: true,
+                    className: "drag-grip", title: "拖拽排序（桌面）", draggable: true,
                     onDragStart: e => onGripDragStart(e, q.id)
                 }, "⠿"),
+                React.createElement("span", { className: "q-move-btns" },
+                    React.createElement("button", { className: "mv-btn", title: "上移", onClick: e => { e.stopPropagation(); onMoveUp(q.id); } }, "↑"),
+                    React.createElement("button", { className: "mv-btn", title: "下移", onClick: e => { e.stopPropagation(); onMoveDown(q.id); } }, "↓")
+                ),
                 React.createElement("div", { className: "deck-q-body" },
-                    React.createElement("div", { className: "wrong-item-header" },
-                        React.createElement(LatexSpan, { className: "wrong-item-title" }, index + 1, ". ", q.question),
-                        React.createElement("span", { className: "wrong-item-meta" }, (TYPE_LABELS[q.type] || q.type), typeof q.score === 'number' ? ' · ' + q.score + '分' : '')
-                    ),
+                React.createElement("div", { className: "wrong-item-header" },
+                    React.createElement(LatexSpan, { className: "wrong-item-title" }, index + 1, ". ", q.question),
+                    React.createElement("span", { className: "wrong-item-meta" }, (TYPE_LABELS[q.type] || q.type), typeof q.score === 'number' ? ' · ' + q.score + '分' : ''),
+                    React.createElement("button", { className: "q-menu-btn", "aria-label": "更多操作",
+                        onClick: e => { e.stopPropagation(); if (onMenu) onMenu(q.id, e.currentTarget); } }, "⋯")
+                ),
                     React.createElement("div", { className: "wrong-actions", style: { marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' } },
                         React.createElement("label", { style: { fontSize: '0.82rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 } },
                             "分值",
@@ -6984,6 +7141,17 @@ body { font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB","Segoe UI"
                 if (!selectedRef.current.has(qid)) { setSelected(new Set([qid])); setLastAnchor(qid); }
                 setMenu({ x: e.clientX, y: e.clientY, qid });
             };
+            // 手机端：题目行「⋯」按钮触发。菜单定位在按钮附近，靠近底部/右侧时自动翻转避免溢出视口。
+            const openRowMenu = (qid, el) => {
+                const r = el.getBoundingClientRect();
+                const vw = window.innerWidth, vh = window.innerHeight;
+                const menuW = 200, menuH = 320;
+                let x = Math.min(r.right - menuW, vw - menuW - 8);
+                if (x < 8) x = 8;
+                let y = r.bottom + 6;
+                if (y + menuH > vh - 8) y = Math.max(8, r.top - menuH - 6);
+                setMenu({ x, y, qid });
+            };
 
             // —— 拖拽排序（原生 DnD，手柄发起）——
             const onGripDragStart = (e, qid) => {
@@ -7011,6 +7179,17 @@ body { font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB","Segoe UI"
                 setDropTarget(null);
             };
             const onRowDragEnd = () => { dragQidRef.current = null; setDropTarget(null); };
+            // —— 触摸端上 / 下移动（HTML5 拖拽手柄在触屏不可用，改用按钮）——
+            const onMoveUp = (qid) => {
+                const arr = deck.questions;
+                const i = arr.findIndex(q => q.id === qid);
+                if (i > 0) moveQuestionsToIndex(deckId, [qid], arr[i - 1].id, false);
+            };
+            const onMoveDown = (qid) => {
+                const arr = deck.questions;
+                const i = arr.findIndex(q => q.id === qid);
+                if (i >= 0 && i < arr.length - 1) moveQuestionsToIndex(deckId, [qid], arr[i + 1].id, true);
+            };
 
             // —— 右键菜单动作（读取 latest selected）——
             const selIds = () => Array.from(selectedRef.current);
@@ -7104,8 +7283,8 @@ body { font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB","Segoe UI"
                                 selected: selected.has(q.id),
                                 onEdit: openEdit, onDelete: handleDelete, onScoreChange: handleScoreChange,
                                 onDifficultyChange: handleDifficultyChange,
-                                onSelect, onContextMenu,
-                                onGripDragStart, onRowDragOver, onRowDrop, onRowDragEnd,
+                                onSelect, onContextMenu, onMenu: openRowMenu,
+                                onGripDragStart, onRowDragOver, onRowDrop, onRowDragEnd, onMoveUp, onMoveDown,
                                 dropIndicator: dropTarget && dropTarget.qid === q.id ? (dropTarget.after ? 'drop-after' : 'drop-before') : null
                             })
                         ),
@@ -7457,7 +7636,9 @@ body { font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB","Segoe UI"
             // 确保早于 React 的 onContextMenu（onItemContextMenu），直接取消并抑制右键菜单。
             useEffect(() => {
                 const onContextMenuCapture = e => {
-                    if (!dragStateRef.current && !pendingDragRef.current) return;
+                    // 仅在拖拽已真正开始（dragStateRef 已置位）时才取消拖拽并抑制菜单；
+                    // 触屏长按（pointerdown 仅设 pendingDragRef、未移动 6px 触发拖拽）不应被拦截，否则手机长按菜单无法弹出。
+                    if (!dragStateRef.current) return;
                     e.preventDefault();
                     e.stopPropagation();
                     endDrag(e, false); // 取消，不执行合并/移动
@@ -10533,6 +10714,7 @@ body { font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB","Segoe UI"
             const svgRef = React.useRef(null);
             const dragRef = React.useRef(null);
             const pointersRef = React.useRef(new Map());
+            const pinchRef = React.useRef(null);
             const spaceRef = React.useRef(false);
             const colorRef = React.useRef(color); const widthRef = React.useRef(width); const toolRef = React.useRef(tool);
             colorRef.current = color; widthRef.current = width; toolRef.current = tool;
@@ -10582,6 +10764,15 @@ body { font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB","Segoe UI"
                 const pm = pointersRef.current;
                 pm.set(e.pointerId, { x: e.clientX, y: e.clientY });
                 try { svgRef.current.setPointerCapture(e.pointerId); } catch (_) {}
+                // 双指按下：进入捏合缩放（取消未完成的笔画，避免与绘制冲突）
+                if (pm.size === 2) {
+                    if (dragRef.current && dragRef.current.mode === 'pen') setDraftStroke(null);
+                    const pts = Array.from(pm.values());
+                    pinchRef.current = { dist: Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) };
+                    dragRef.current = { mode: 'pinch' };
+                    setGrabbing(true);
+                    return;
+                }
                 const isPan = toolRef.current === 'hand' || e.button === 1 || (e.button === 0 && spaceRef.current);
                 if (isPan) {
                     dragRef.current = { mode: 'pan', x: e.clientX, y: e.clientY, v: view, sx: e.clientX, sy: e.clientY };
@@ -10608,6 +10799,20 @@ body { font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB","Segoe UI"
                 const d = dragRef.current; const pm = pointersRef.current;
                 if (pm.has(e.pointerId)) pm.set(e.pointerId, { x: e.clientX, y: e.clientY });
                 if (!d) return;
+                if (d.mode === 'pinch') {
+                    e.preventDefault();
+                    const pts = Array.from(pm.values());
+                    if (pts.length < 2) return;
+                    const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+                    const pc = pinchRef.current;
+                    if (!pc || pc.dist <= 0) { pinchRef.current = { dist }; return; }
+                    const f = dist / pc.dist;
+                    const rect = svgRef.current.getBoundingClientRect();
+                    const rx = (pts[0].x + pts[1].x) / 2 - rect.left, ry = (pts[0].y + pts[1].y) / 2 - rect.top;
+                    setView(v => geomZoomAt(v, fit, rx / rect.width, ry / rect.height, f));
+                    pinchRef.current = { dist };
+                    return;
+                }
                 if (d.mode === 'pen') {
                     e.preventDefault();
                     const evs = (e.getCoalescedEvents && e.getCoalescedEvents()) || [e]; // 合并高频采样，避免断笔
@@ -10646,7 +10851,8 @@ body { font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB","Segoe UI"
                     if (keep) setStrokes(prev => [...prev, { pts: d.pts.slice(), color: colorRef.current, width: widthRef.current }]);
                     setDraftStroke(null);
                 }
-                if (pm.size === 0) { dragRef.current = null; setGrabbing(false); }
+                if (pm.size === 0) { dragRef.current = null; pinchRef.current = null; setGrabbing(false); }
+                else if (d && d.mode === 'pinch') { dragRef.current = null; pinchRef.current = null; }
             };
 
             const zoomAt = (f) => setView(v => geomZoomAt(v, fit, 0.5, 0.5, f));
@@ -13174,6 +13380,7 @@ body { font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB","Segoe UI"
             const { stats } = useStats();
             const { decks, setDecks } = useData();
             const { mode, setMode } = useUi();
+            const isMobile = useIsMobile();
             const { startLearning, startPractice, startFavPractice } = useActions();
             const appShellRef = useRef(null);
             useEffect(() => {
@@ -13209,7 +13416,7 @@ body { font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB","Segoe UI"
             else if (mode === 'practice' && practiceSession) content = React.createElement(PracticeCard, null);
             else content = React.createElement(Home, null);
 
-            return React.createElement("div", { className: "app-shell" + (mode === 'generate' || mode === 'learn' || mode === 'practice' || mode === 'wrong' || mode === 'favorites' ? " mode-fill" : ""), ref: appShellRef },
+            return React.createElement("div", { className: "app-shell" + (isMobile ? " mobile" : "") + (mode === 'generate' || mode === 'learn' || mode === 'practice' || mode === 'wrong' || mode === 'favorites' ? " mode-fill" : ""), ref: appShellRef },
                 React.createElement(Sidebar, null),
                 React.createElement("main", { className: mode === 'home' ? "main-content home-mode" : (mode === 'wrong' || mode === 'favorites' || mode === 'generate') ? "main-content wf-fill" : "main-content" },
                     React.createElement(LearnTimeProvider, { session, practiceSession, decks, setDecks, mode },
@@ -13218,7 +13425,8 @@ body { font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB","Segoe UI"
                     React.createElement("div", { className: mode === 'home' ? "content-wrap home-mode" : (mode === 'wrong' || mode === 'favorites') ? "content-wrap wf-mode" : "content-wrap" }, content)
                 ),
                 React.createElement(MusicPlayer, null),
-                React.createElement(ScratchPad, null)
+                React.createElement(ScratchPad, null),
+                React.createElement(BottomNav, null)
             );
         };
 
@@ -13627,7 +13835,7 @@ body { font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB","Segoe UI"
         // ============================================================
         // 19. 渲染
         // ============================================================
-        // 设备检测：手机 / 平板不提供适配，拦截并提示使用电脑
+        // 设备检测：手机 / 平板也提供支持（响应式布局 + 触摸交互）
         function isMobileDevice() {
             var ua = navigator.userAgent || '';
             if (/Mobi|Android|iPhone|iPod|iPad|Windows Phone|webOS|BlackBerry|Opera Mini|IEMobile|Tablet/i.test(ua)) return true;
@@ -13635,24 +13843,27 @@ body { font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB","Segoe UI"
             if (navigator.maxTouchPoints > 0 && Math.min(window.innerWidth, window.innerHeight) < 500) return true; // 触屏竖屏手机兜底
             return false;
         }
-        if (isMobileDevice()) {
-            document.getElementById('root').innerHTML =
-                '<div class="mobile-block">' +
-                '<div class="ico">🖥️</div>' +
-                '<h1>手机无法使用</h1>' +
-                '<p>请使用电脑打开本应用。</p>' +
-                '</div>';
-        } else {
-            installLatexAutocomplete();
-            const root = ReactDOM.createRoot(document.getElementById('root'));
-            root.render(
-                React.createElement(ThemeProvider, null,
-                    React.createElement(AppProvider, null,
-                        React.createElement(App, null)
-                    )
-                )
-            );
+        const IS_TOUCH = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || isMobileDevice();
+        const MOBILE_MQ = (window.matchMedia ? window.matchMedia('(max-width: 820px)') : null) || { matches: false, addEventListener: function(){}, removeEventListener: function(){} };
+        function useIsMobile() {
+            const [m, setM] = React.useState(!!(MOBILE_MQ && MOBILE_MQ.matches));
+            React.useEffect(() => {
+                if (!MOBILE_MQ || !MOBILE_MQ.addEventListener) return;
+                const fn = e => setM(!!(e ? e.matches : (MOBILE_MQ && MOBILE_MQ.matches)));
+                MOBILE_MQ.addEventListener('change', fn);
+                return () => MOBILE_MQ.removeEventListener('change', fn);
+            }, []);
+            return m;
         }
+        installLatexAutocomplete();
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(
+            React.createElement(ThemeProvider, null,
+                React.createElement(AppProvider, null,
+                    React.createElement(App, null)
+                )
+            )
+        );
     </script>
 </body>
 </html>
