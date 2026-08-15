@@ -7248,7 +7248,7 @@ body { font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB","Segoe UI"
 
         const ScratchPad = React.memo(() => {
             const { mode } = useUi();
-            const showScratch = mode === 'learn' || mode === 'practice' || mode === 'generate' || mode === 'wrong' || mode === 'favorites';
+            const showScratch = mode === 'learn' || mode === 'practice';
 
             // 与几何画板一致的「空白画布」默认视图：原点居中，1 数据单位 = 1 SVG 单位
             const fit = React.useMemo(() => ({ scale: 1, yscale: 1, xZero: FIG_VBW / 2, yZero: FIG_VBH / 2 }), []);
