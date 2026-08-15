@@ -9401,6 +9401,14 @@ body { font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB","Segoe UI"
             }
             if (pendingRef.current === null) pendingRef.current = new Set();
 
+            // 频谱可视化：用 AnalyserNode 读取实时频率数据，驱动「播放中」的均衡器条高度
+            const eqWrapRef = useRef(null);     // 均衡器容器（.eq）DOM
+            const rafRef = useRef(0);           // requestAnimationFrame 句柄
+            const vizActiveRef = useRef(false); // 是否正在以频谱驱动动画
+            const freqDataRef = useRef(null);   // 频域数据缓冲 Uint8Array
+            // 组件卸载时停掉 rAF，避免内存泄漏
+            useEffect(() => () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); }, []);
+
             // 持久化（仅可跨会话保存的 http/data 链接；本地文件 blob 走 IndexedDB）
             useEffect(() => {
                 try {
@@ -9489,8 +9497,12 @@ body { font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB","Segoe UI"
                     const src = ctx.createMediaElementSource(a);
                     const gain = ctx.createGain();
                     gain.gain.value = 1;
-                    src.connect(gain); gain.connect(ctx.destination);
-                    graphRef.current = { ctx, src, gain };
+                    // 频谱分析节点：串在 gain 之后、输出之前（gain -> analyser -> destination）
+                    const analyser = ctx.createAnalyser();
+                    analyser.fftSize = 64;                 // frequencyBinCount = 32
+                    analyser.smoothingTimeConstant = 0.8;  // 平滑，避免抖动过猛
+                    src.connect(gain); gain.connect(analyser); analyser.connect(ctx.destination);
+                    graphRef.current = { ctx, src, gain, analyser };
                     if (ctx.state === 'suspended') ctx.resume().catch(() => {});
                     applyGain();
                     return graphRef.current;
@@ -9566,6 +9578,44 @@ body { font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB","Segoe UI"
                     if (audioRef.current) audioRef.current.volume = 1;
                 } else if (audioRef.current) {
                     audioRef.current.volume = Math.min(1, eff); // 无图时仅能衰减（增益上限 1）
+                }
+            };
+
+            // 频谱驱动均衡器：播放时关闭 CSS 循环动画，改用实时频率数据设置每根条高度；
+            // 无 Web Audio 分析能力（如浏览器不支持 AudioContext）时直接返回，退回 CSS 循环动画。
+            const startViz = () => {
+                if (vizActiveRef.current) return; // 已在驱动，避免切歌时叠加多个 rAF 循环
+                const gr = graphRef.current;
+                const eq = eqWrapRef.current;
+                if (!gr || !gr.analyser || !eq) return;
+                if (!freqDataRef.current) freqDataRef.current = new Uint8Array(gr.analyser.frequencyBinCount);
+                for (let i = 0; i < eq.children.length; i++) eq.children[i].style.animation = 'none'; // 停掉 CSS 关键帧
+                vizActiveRef.current = true;
+                const data = freqDataRef.current;
+                const draw = () => {
+                    if (!vizActiveRef.current) return;
+                    gr.analyser.getByteFrequencyData(data);
+                    const spans = eq.children, n = spans.length;
+                    for (let i = 0; i < n; i++) {
+                        // 取频谱低 ~60%（中低频，律动最明显），映射到各条
+                        const bin = Math.floor((i + 0.5) / n * (data.length * 0.6));
+                        const v = data[bin] || 0;
+                        const hh = 6 + (v / 255) * 18;
+                        spans[i].style.height = hh.toFixed(1) + 'px';
+                    }
+                    rafRef.current = requestAnimationFrame(draw);
+                };
+                rafRef.current = requestAnimationFrame(draw);
+            };
+
+            // 停止频谱驱动：取消 rAF，恢复静止小条（保持 animation:none，避免 CSS 动画在暂停态“卡”在某一帧）
+            const stopViz = () => {
+                vizActiveRef.current = false;
+                if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = 0; }
+                const eq = eqWrapRef.current;
+                if (eq) for (let i = 0; i < eq.children.length; i++) {
+                    eq.children[i].style.animation = 'none';
+                    eq.children[i].style.height = '8px';
                 }
             };
 
@@ -9686,7 +9736,7 @@ body { font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB","Segoe UI"
                     return;
                 }
                 const n = tracksRef.current.length;
-                if (currentRef.current >= n - 1 && repeatRef.current === 'off') { setPlaying(false); return; }
+                if (currentRef.current >= n - 1 && repeatRef.current === 'off') { setPlaying(false); stopViz(); return; }
                 onNext();
             };
 
@@ -9788,7 +9838,7 @@ body { font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB","Segoe UI"
                 ),
                 h('div', { className: 'now-playing' + (playing ? ' playing' : ''), onClick: togglePlay, title: '点击播放 / 暂停' },
                     h('div', { className: 'np-cover' },
-                        h('div', { className: 'eq' + (playing ? '' : ' paused') },
+                        h('div', { ref: eqWrapRef, className: 'eq' + (playing ? '' : ' paused') },
                             h('span'), h('span'), h('span'), h('span'), h('span')
                         )
                     ),
@@ -9836,7 +9886,7 @@ body { font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB","Segoe UI"
                             h('button', { className: 'pl-del', title: '移除', onClick: (e) => { e.stopPropagation(); removeTrack(t.id); } }, '✕')
                         ))
                 ),
-                h('audio', { ref: audioRef, onTimeUpdate: onTime, onLoadedMetadata: onMeta, onEnded: onEnded, onPlay: () => { setPlaying(true); ensureGraph(); applyGain(); }, onPause: () => setPlaying(false) })
+                h('audio', { ref: audioRef, onTimeUpdate: onTime, onLoadedMetadata: onMeta, onEnded: onEnded, onPlay: () => { setPlaying(true); ensureGraph(); applyGain(); startViz(); }, onPause: () => { setPlaying(false); stopViz(); } })
             );
         });
 
