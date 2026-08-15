@@ -2603,6 +2603,16 @@
         }
         .add-btn:hover { background: var(--surface-3); border-color: var(--accent); }
         .add-btn.sm { flex: 0 0 auto; padding: 9px 14px; border-style: solid; }
+        .add-btn.gh-import { background: var(--accent-soft); border-style: solid; border-color: var(--accent); flex: 0 0 auto; padding: 9px 14px; }
+        .add-btn.gh-import.busy { opacity: .7; cursor: progress; }
+        .gh-row { display: flex; gap: 8px; margin-top: 8px; }
+        .gh-input { flex: 1; min-width: 0; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border-strong); background: var(--card-bg); color: var(--text); font-size: .8rem; outline: none; transition: border-color .15s; }
+        .gh-input:focus { border-color: var(--accent); }
+        .gh-input::placeholder { color: var(--text-muted); }
+        .gh-hint { font-size: .68rem; color: var(--text-muted); line-height: 1.6; padding: 6px 2px 0; }
+        .import-status { font-size: .72rem; color: var(--text-muted); padding: 4px 2px 0; line-height: 1.5; }
+        .import-bar { height: 5px; background: var(--surface-3); border-radius: 999px; overflow: hidden; margin: 4px 2px 0; }
+        .import-bar-fill { height: 100%; width: 0; background: var(--accent); border-radius: 999px; transition: width .12s linear; }
 
         .pl-head { display: flex; align-items: center; gap: 8px; font-size: .9rem; font-weight: 700; color: var(--text); margin-top: 2px; }
         .pl-count { font-size: .72rem; font-weight: 600; color: var(--text-muted); background: var(--surface-3); border-radius: 999px; padding: 1px 8px; }

@@ -9350,6 +9350,33 @@ body { font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB","Segoe UI"
         // 本地音频文件（blob URL 刷新即失效）改用 IndexedDB 持久化，刷新后重建 URL
         // （IndexedDB 辅助函数 openMusicDB/idbPut/idbGetAll/idbDelete 已提到备份区共享作用域）
 
+        // 作者歌单仓库（GitHub）：供「🌐 作者歌单」按钮从仓库下载并导入
+        const AUTHOR_REPO_API = 'https://api.github.com/repos/wuji101026/music/contents/';
+        const AUTHOR_REPO_RAW = 'https://raw.githubusercontent.com/wuji101026/music/main/';
+        // 内置回退清单：GitHub API 限流（未登录 60 次/小时）时仍可从 raw 直链下载
+        const AUTHOR_PLAYLIST_FALLBACK = [
+            '晴天 - 周杰伦 - APLMate.com.mp3',
+            '最后一页 - 江语晨 - APLMate.com.mp3',
+            '海屿你(求你别离开我) - 马也_Crabbit - APLMate.com.mp3',
+            '猜不透 - 丁当 - APLMate.com.mp3'
+        ];
+        // 清洗歌名：去扩展名 + 去掉结尾的来源域名后缀（如「 - APLMate.com」）
+        const cleanTrackName = (n) => {
+            const s = (n || '').replace(/\.[^.]+$/, '').replace(/\s*-\s*[\w.-]+\.(com|cn|net|org)\s*$/i, '');
+            return s.trim() || (n || '作者歌曲');
+        };
+        // 解析用户填写的 GitHub 仓库标识：支持「owner/repo」「https://github.com/owner/repo(.git)」等写法
+        const parseGithubRepo = (spec) => {
+            if (!spec) return null;
+            const s = String(spec).trim();
+            if (!s) return null;
+            let m = s.match(/github\.com\/([^\/\s?#]+)\/([^\/\s?#]+)/i);
+            if (m) return { owner: m[1], repo: m[2].replace(/\.git$/i, '') };
+            m = s.match(/^([^\/\s]+)\/([^\/\s]+)$/);
+            if (m) return { owner: m[1], repo: m[2].replace(/\.git$/i, '') };
+            return null;
+        };
+
         const MusicPlayer = React.memo(() => {
             const h = React.createElement;
             const STORE_KEY = 'xdd_music_tracks_v1';
@@ -9380,10 +9407,13 @@ body { font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB","Segoe UI"
             const [analyzing, setAnalyzing] = useState(false);
             const [repeat, setRepeat] = useState('off');   // off | all | one
             const [shuffle, setShuffle] = useState(false);
+            const [importing, setImporting] = useState(null);   // 导入作者歌单进度（null 表示空闲）
+            const [importProg, setImportProg] = useState(-1);   // 当前歌曲下载进度 0..1，-1 表示空闲/未知
 
             const audioRef = useRef(null);
             const fileRef = useRef(null);
             const folderRef = useRef(null);
+            const repoInputRef = useRef(null);   // 自定义 GitHub 仓库输入框
             const tracksRef = useRef(tracks); tracksRef.current = tracks;
             const currentRef = useRef(current); currentRef.current = current;
             const repeatRef = useRef(repeat); repeatRef.current = repeat;
@@ -9423,7 +9453,7 @@ body { font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB","Segoe UI"
                     if (!alive) return;
                     const restored = (rows || []).filter(r => r && r.blob).map(r => ({
                         id: r.id, title: r.title || '本地音频', artist: (r.artist && r.artist !== '本地文件') ? r.artist : '',
-                        url: URL.createObjectURL(r.blob)
+                        url: URL.createObjectURL(r.blob), src: r.src || ''
                     }));
                     if (restored.length) setTracks(prev => {
                         const have = new Set(prev.map(t => t.id));
@@ -9786,6 +9816,96 @@ body { font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB","Segoe UI"
                 addFileList(e.target.files);
                 e.target.value = '';
             };
+            // 带进度的流式下载：读取响应流并累加字节，经 onProg(p, recv, total) 回报进度（total=0 表示未知大小）
+            const downloadWithProgress = async (url, onProg) => {
+                const resp = await fetch(url);
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                const total = parseInt(resp.headers.get('Content-Length') || '0', 10);
+                if (!resp.body || !resp.body.getReader) { const b = await resp.blob(); onProg(-1, 0, 0); return b; }
+                const reader = resp.body.getReader();
+                const chunks = [];
+                let received = 0;
+                for (;;) {
+                    const chunk = await reader.read();
+                    if (chunk.done) break;
+                    if (chunk.value && chunk.value.length) { chunks.push(chunk.value); received += chunk.value.length; }
+                    onProg(total ? received / total : -1, received, total);
+                }
+                let len = 0;
+                for (const c of chunks) len += c.length;
+                const buf = new Uint8Array(len);
+                let pos = 0;
+                for (const c of chunks) { buf.set(c, pos); pos += c.length; }
+                return new Blob([buf], { type: resp.headers.get('Content-Type') || 'audio/mpeg' });
+            };
+            // 从 GitHub 仓库下载并导入歌单（支持自定义仓库）：先尝试 GitHub API 实时清单，
+            // 仅默认作者仓库在 API 限流时回退内置清单；每首流式下载（带实时进度）后写入本地音乐库（IndexedDB）
+            const importGithubPlaylist = async () => {
+                if (importing) return;
+                const spec = repoInputRef.current ? repoInputRef.current.value : '';
+                const repo = parseGithubRepo(spec) || { owner: 'wuji101026', repo: 'music' };
+                const isDefault = repo.owner === 'wuji101026' && repo.repo === 'music';
+                const apiUrl = 'https://api.github.com/repos/' + repo.owner + '/' + repo.repo + '/contents/';
+                setImporting('获取歌单 ' + repo.owner + '/' + repo.repo + '…');
+                setImportProg(-1);
+                try {
+                    let files = [];
+                    try {
+                        const resp = await fetch(apiUrl, { headers: { 'Accept': 'application/vnd.github+json' } });
+                        if (resp.ok) {
+                            const data = await resp.json();
+                            files = (Array.isArray(data) ? data : []).filter(it => it && it.type === 'file' && isAudioFile({ name: it.name }));
+                        }
+                    } catch (e) { /* 网络异常 → 下面判断回退 */ }
+                    if (!files.length) {
+                        // 仅默认作者仓库有内置清单可回退；自定义仓库失败则提示（其清单依赖 API）
+                        if (isDefault) files = AUTHOR_PLAYLIST_FALLBACK.map(name => ({ name, download_url: AUTHOR_REPO_RAW + encodeURIComponent(name) }));
+                        else { setImporting(null); setImportProg(-1); alert('无法读取仓库 ' + repo.owner + '/' + repo.repo + '：可能是 GitHub API 限流（未登录 60 次/小时）、仓库不存在或无音频文件。请稍后重试，或确认仓库地址。'); return; }
+                    }
+                    if (!files.length) { setImporting(null); setImportProg(-1); alert('未能从仓库 ' + repo.owner + '/' + repo.repo + ' 读取到音频文件。'); return; }
+
+                    // 去重：以仓库原始文件名为稳定标识（不受 ID3 改写标题影响），避免重复导入
+                    const have = new Set(tracksRef.current.map(t => t.src).filter(Boolean));
+                    let done = 0, added = 0;
+                    for (const f of files) {
+                        const title = cleanTrackName(f.name);
+                        const key = f.name;
+                        if (have.has(key)) { done++; continue; }
+                        setImportProg(0);
+                        try {
+                            const url = f.download_url || ('https://raw.githubusercontent.com/' + repo.owner + '/' + repo.repo + '/main/' + encodeURIComponent(f.name));
+                            const blob = await downloadWithProgress(url, (p, recv, tot) => {
+                                setImportProg(p);
+                                const recvMB = (recv / 1048576).toFixed(1);
+                                const totMB = tot ? ('/' + (tot / 1048576).toFixed(1)) : '';
+                                setImporting('下载中 ' + (done + 1) + '/' + files.length + '：' + title + '  ' + Math.round((p < 0 ? 0 : p) * 100) + '% (' + recvMB + totMB + ' MB)');
+                            });
+                            if (!blob || blob.size < 1024) { setImportProg(-1); done++; continue; }
+                            const id = 'gh' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7) + done;
+                            idbPut({ id, blob, title, artist: '', src: key });
+                            setTracks(ts => ts.concat({ id, title, artist: '', url: URL.createObjectURL(blob), src: key }));
+                            // 与「本地音乐」一致：异步回填 ID3 标签（歌手/标题），让显示格式统一
+                            parseAudioMeta(blob).then(meta => {
+                                const artist = (meta.artist || '').trim();
+                                const t2 = (meta.title || '').trim();
+                                if (!artist && !t2) return;
+                                setTracks(ts => ts.map(t => t.id === id ? { ...t, artist: artist || t.artist, title: t2 || t.title } : t));
+                                idbPut({ id, blob, title: t2 || title, artist: artist || '', src: key });
+                            }).catch(() => {});
+                            have.add(key); added++;
+                        } catch (e) { /* 单曲失败跳过 */ }
+                        setImportProg(-1);
+                        done++;
+                    }
+                    const count = added;
+                    setImporting(count ? ('已导入 ' + count + ' 首 🎵') : '歌单已是最新');
+                    setImportProg(-1);
+                    setTimeout(() => setImporting(cur => (cur && (cur.indexOf('已导入') === 0 || cur === '歌单已是最新')) ? null : cur), 2600);
+                } catch (e) {
+                    setImporting(null); setImportProg(-1);
+                    alert('导入歌单失败：' + (e && e.message ? e.message : e));
+                }
+            };
             // 拖拽到面板添加
             const dragDepth = useRef(0);
             const [dragOver, setDragOver] = useState(false);
@@ -9873,6 +9993,13 @@ body { font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB","Segoe UI"
                     h('input', { ref: fileRef, type: 'file', accept: 'audio/*', multiple: true, style: { display: 'none' }, onChange: addFiles }),
                     h('input', { ref: folderRef, type: 'file', multiple: true, webkitdirectory: '', directory: '', style: { display: 'none' }, onChange: addFolder })
                 ),
+                h('div', { className: 'gh-row' },
+                    h('input', { ref: repoInputRef, className: 'gh-input', type: 'text', placeholder: 'GitHub 仓库 owner/repo（留空=作者歌单）', title: '填写 owner/repo 或完整 GitHub 链接，如 wuji101026/music 或 https://github.com/wuji101026/music', onKeyDown: (e) => { if (e.key === 'Enter' && !importing) importGithubPlaylist(); } }),
+                    h('button', { className: 'add-btn gh-import' + (importing ? ' busy' : ''), disabled: !!importing, onClick: importGithubPlaylist, title: '从指定 GitHub 仓库下载并导入歌单' }, importing ? '⏳ 导入中…' : '🌐 导入歌单')
+                ),
+                importing ? h('div', { className: 'import-status' }, importing) : null,
+                importProg >= 0 ? h('div', { className: 'import-bar' }, h('div', { className: 'import-bar-fill', style: { width: Math.max(2, Math.round(importProg * 100)) + '%' } })) : null,
+                h('div', { className: 'gh-hint' }, '说明：仓库需含音频文件（mp3/wav/flac/ogg/m4a…），将逐首下载并存入本地音乐库（可离线播放）。支持填「owner/repo」或完整 GitHub 链接；留空默认导入作者歌单。受 GitHub API 限制（未登录 60 次/小时），频繁导入可能需稍后重试。'),
                 h('div', { className: 'pl-head' }, '播放列表', h('span', { className: 'pl-count' }, String(tracks.length))),
                 h('div', { className: 'pl-list' },
                     tracks.length === 0
