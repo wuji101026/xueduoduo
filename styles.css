@@ -2616,7 +2616,7 @@
 
         .pl-head { display: flex; align-items: center; gap: 8px; font-size: .9rem; font-weight: 700; color: var(--text); margin-top: 2px; }
         .pl-count { font-size: .72rem; font-weight: 600; color: var(--text-muted); background: var(--surface-3); border-radius: 999px; padding: 1px 8px; }
-        .pl-list { display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow-y: auto; margin: -2px -4px 0; padding: 2px 4px; }
+        .pl-list { display: flex; flex-direction: column; gap: 6px; max-height: 520px; overflow-y: auto; margin: -2px -4px 0; padding: 2px 4px; }
         .pl-empty { font-size: .8rem; color: var(--text-muted); text-align: center; padding: 18px 8px; line-height: 1.6; }
         .pl-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 11px; cursor: pointer; transition: background .15s; border: 1px solid transparent; }
         .pl-item:hover { background: var(--surface-3); }
@@ -2627,6 +2627,17 @@
         .pl-artist { font-size: .72rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .pl-del { flex-shrink: 0; width: 24px; height: 24px; border-radius: 7px; border: none; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; }
         .pl-del:hover { background: var(--danger); color: #fff; }
+
+        .about-author { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--surface-3); }
+        .about-author-btn {
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+            width: 100%; padding: 10px 12px; border-radius: 11px; cursor: pointer;
+            font-size: .85rem; font-weight: 700; text-decoration: none;
+            color: var(--accent); background: var(--accent-soft);
+            border: 1px solid var(--accent); transition: background .15s, transform .1s;
+        }
+        .about-author-btn:hover { background: var(--accent); color: #fff; }
+        .about-author-btn:active { transform: scale(.98); }
 
         .music-panel.drag-over { outline: 2px dashed var(--accent); outline-offset: -8px; background: var(--accent-soft); }
         .drop-hint {

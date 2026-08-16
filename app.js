@@ -9261,7 +9261,7 @@ body { font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB","Segoe UI"
                 return p(h) + ':' + p(m) + ':' + p(s);
             };
             const week = ['日', '一', '二', '三', '四', '五', '六'][now.getDay()];
-            const dateStr = (now.getMonth() + 1) + '月' + now.getDate() + '日 周' + week;
+            const dateStr = now.getFullYear() + '年' + (now.getMonth() + 1) + '月' + now.getDate() + '日 周' + week;
 
             const numInput = (unit, val, set) => {
                 const cur = { h: setH, m: setM, s: setS };
@@ -10012,6 +10012,9 @@ body { font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB","Segoe UI"
                             ),
                             h('button', { className: 'pl-del', title: '移除', onClick: (e) => { e.stopPropagation(); removeTrack(t.id); } }, '✕')
                         ))
+                ),
+                h('div', { className: 'about-author' },
+                    h('a', { className: 'about-author-btn', href: 'https://wuji101026.github.io/', target: '_blank', rel: 'noopener noreferrer', title: '访问作者主页' }, '👤 关于作者')
                 ),
                 h('audio', { ref: audioRef, onTimeUpdate: onTime, onLoadedMetadata: onMeta, onEnded: onEnded, onPlay: () => { setPlaying(true); ensureGraph(); applyGain(); startViz(); }, onPause: () => { setPlaying(false); stopViz(); } })
             );
